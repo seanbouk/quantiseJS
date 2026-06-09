@@ -39,8 +39,9 @@ export function SelectMenu({ value, groups, onChange, ariaLabel }: Props) {
       const margin = 12
       const below = window.innerHeight - rect.bottom - margin
       const above = rect.top - margin
-      const up = below < 240 && above > below
-      const maxHeight = Math.max(140, Math.min(560, Math.floor(up ? above : below)))
+      // open toward whichever side has more room, and use all of it
+      const up = above > below
+      const maxHeight = Math.max(140, Math.floor(up ? above : below))
       setMenuStyle(
         up
           ? { top: 'auto', bottom: 'calc(100% + 2px)', maxHeight }
