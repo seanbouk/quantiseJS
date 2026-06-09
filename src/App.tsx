@@ -4,8 +4,9 @@ import { CanvasView } from './components/CanvasView'
 import { SourceView } from './components/SourceView'
 import { PaletteView } from './components/PaletteView'
 import { imageToImageData, loadImageFile } from './lib/image'
-import { quantise, type QuantiseResult } from './lib/quantise'
-import { applyGrade, NEUTRAL_GRADE } from './lib/grade'
+import type { QuantiseOptions, QuantiseResult } from './lib/quantise'
+import type { WorkerRequest, WorkerResponse } from './lib/worker'
+import { NEUTRAL_GRADE } from './lib/grade'
 import { presetById, PRESETS } from './lib/presets'
 
 function defaultSettings(): Settings {
@@ -43,41 +44,52 @@ export default function App() {
 
   const preset = useMemo(() => presetById(settings.presetId), [settings.presetId])
 
-  const run = useCallback(() => {
-    if (!img) return
-    setBusy(true)
-    // Yield to the browser so the busy state paints before we block.
-    setTimeout(() => {
-      let input = imageToImageData(
-        img,
-        settings.width,
-        settings.height,
-        settings.downscale,
-        settings.fitMode,
-      )
-      // Colour grade the source before quantising.
-      input = applyGrade(input, settings.grade)
-      const res = quantise(input, {
-        palettes: settings.palettes,
-        colorsPerPalette: settings.colorsPerPalette,
-        maxColorsPerTile: settings.maxColorsPerTile,
-        sharedBg: settings.sharedBg,
-        regionW: settings.attributeGrid ? settings.tileWidth * 2 : settings.tileWidth,
-        regionH: settings.attributeGrid ? settings.tileHeight * 2 : settings.tileHeight,
-        tileW: settings.tileWidth,
-        tileH: settings.tileHeight,
-        depth: preset.depth,
-        dither: settings.dither,
-        shadow: settings.shadow,
-        highlight: settings.highlight,
-        maxUniqueTiles: settings.maxUniqueTiles,
-        flipH: settings.flipH,
-        flipV: settings.flipV,
-        rotate: settings.rotate,
-      })
-      setResult(res)
+  // Pipeline runs in a worker; only the latest request's result is applied.
+  const workerRef = useRef<Worker | null>(null)
+  const reqId = useRef(0)
+  useEffect(() => {
+    const w = new Worker(new URL('./lib/worker.ts', import.meta.url), { type: 'module' })
+    w.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      if (e.data.id !== reqId.current) return // stale
+      setResult({ imageData: e.data.imageData, palettes: e.data.palettes, stats: e.data.stats })
       setBusy(false)
-    }, 0)
+    }
+    workerRef.current = w
+    return () => w.terminate()
+  }, [])
+
+  const run = useCallback(() => {
+    const w = workerRef.current
+    if (!img || !w) return
+    setBusy(true)
+    // Resize (needs canvas/DOM) on the main thread; grade + quantise in the worker.
+    const input = imageToImageData(
+      img,
+      settings.width,
+      settings.height,
+      settings.downscale,
+      settings.fitMode,
+    )
+    const opts: QuantiseOptions = {
+      palettes: settings.palettes,
+      colorsPerPalette: settings.colorsPerPalette,
+      maxColorsPerTile: settings.maxColorsPerTile,
+      sharedBg: settings.sharedBg,
+      regionW: settings.attributeGrid ? settings.tileWidth * 2 : settings.tileWidth,
+      regionH: settings.attributeGrid ? settings.tileHeight * 2 : settings.tileHeight,
+      tileW: settings.tileWidth,
+      tileH: settings.tileHeight,
+      depth: preset.depth,
+      dither: settings.dither,
+      shadow: settings.shadow,
+      highlight: settings.highlight,
+      maxUniqueTiles: settings.maxUniqueTiles,
+      flipH: settings.flipH,
+      flipV: settings.flipV,
+      rotate: settings.rotate,
+    }
+    const req: WorkerRequest = { id: ++reqId.current, imageData: input, grade: settings.grade, opts }
+    w.postMessage(req)
   }, [img, settings, preset])
 
   // Auto-process whenever the image or settings change, debounced so dragging
