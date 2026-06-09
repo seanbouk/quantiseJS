@@ -203,9 +203,9 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         <div className="field">
           <label>scaling</label>
           <select value={settings.fitMode} onChange={(e) => update({ fitMode: e.target.value as FitMode })}>
-            <option value="stretch">Stretch (fill frame, distort)</option>
-            <option value="fit">Fit (letterbox, keep aspect)</option>
-            <option value="fill">Fill (cover + crop, keep aspect)</option>
+            <option value="stretch">Stretch</option>
+            <option value="fit">Fit</option>
+            <option value="fill">Fill</option>
           </select>
         </div>
         <label className="check">
