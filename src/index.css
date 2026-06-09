@@ -138,6 +138,16 @@ input[type='text'] {
   border-top: 5px solid var(--muted);
   pointer-events: none;
 }
+.select-trigger {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 7px 26px 7px 8px;
+  font-size: 14px;
+  width: 100%;
+  text-align: left;
+}
 .combo-list {
   position: absolute;
   z-index: 20;
@@ -150,7 +160,7 @@ input[type='text'] {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 6px;
-  max-height: 240px;
+  max-height: min(70vh, 560px);
   overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
@@ -165,6 +175,17 @@ input[type='text'] {
 }
 .combo-list li.sel {
   color: var(--accent);
+}
+.combo-list .grp-label {
+  padding: 8px 8px 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  cursor: default;
+}
+.combo-list .grp-label:hover {
+  background: none;
 }
 
 .grid2 {

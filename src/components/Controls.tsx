@@ -1,8 +1,41 @@
 import { type ChangeEvent } from 'react'
 import { PRESETS, type Preset } from '../lib/presets'
 import { Combo } from './Combo'
+import { SelectMenu, type SelectGroup } from './SelectMenu'
 import type { DownscaleMode, FitMode } from '../lib/image'
 import type { Dither } from '../lib/quantise'
+
+const DITHER_GROUPS: SelectGroup[] = [
+  { options: [{ value: 'none', label: 'None' }] },
+  {
+    label: 'Ordered',
+    options: [
+      { value: 'bayer2', label: 'Bayer 2×2' },
+      { value: 'bayer4', label: 'Bayer 4×4' },
+      { value: 'bayer8', label: 'Bayer 8×8' },
+      { value: 'cluster4', label: 'Clustered dot 4×4' },
+      { value: 'blue', label: 'Blue noise' },
+      { value: 'linesV', label: 'Vertical lines' },
+      { value: 'linesH', label: 'Horizontal lines' },
+      { value: 'linesD', label: 'Diagonal lines' },
+    ],
+  },
+  {
+    label: 'Error diffusion',
+    options: [
+      { value: 'floyd', label: 'Floyd–Steinberg' },
+      { value: 'falseFloyd', label: 'False Floyd–Steinberg' },
+      { value: 'jjn', label: 'Jarvis–Judice–Ninke' },
+      { value: 'stucki', label: 'Stucki' },
+      { value: 'atkinson', label: 'Atkinson' },
+      { value: 'burkes', label: 'Burkes' },
+      { value: 'sierra', label: 'Sierra (3-row)' },
+      { value: 'sierra2', label: 'Sierra (2-row)' },
+      { value: 'sierraLite', label: 'Sierra Lite' },
+    ],
+  },
+  { label: 'Stochastic', options: [{ value: 'random', label: 'White noise' }] },
+]
 
 export interface Settings {
   presetId: string
@@ -221,33 +254,12 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         </div>
         <div className="field">
           <label>dithering</label>
-          <select value={settings.dither} onChange={(e) => update({ dither: e.target.value as Dither })}>
-            <option value="none">None</option>
-            <optgroup label="Ordered">
-              <option value="bayer2">Bayer 2×2</option>
-              <option value="bayer4">Bayer 4×4</option>
-              <option value="bayer8">Bayer 8×8</option>
-              <option value="cluster4">Clustered dot 4×4</option>
-              <option value="blue">Blue noise</option>
-              <option value="linesV">Vertical lines</option>
-              <option value="linesH">Horizontal lines</option>
-              <option value="linesD">Diagonal lines</option>
-            </optgroup>
-            <optgroup label="Error diffusion">
-              <option value="floyd">Floyd–Steinberg</option>
-              <option value="falseFloyd">False Floyd–Steinberg</option>
-              <option value="jjn">Jarvis–Judice–Ninke</option>
-              <option value="stucki">Stucki</option>
-              <option value="atkinson">Atkinson</option>
-              <option value="burkes">Burkes</option>
-              <option value="sierra">Sierra (3-row)</option>
-              <option value="sierra2">Sierra (2-row)</option>
-              <option value="sierraLite">Sierra Lite</option>
-            </optgroup>
-            <optgroup label="Stochastic">
-              <option value="random">White noise</option>
-            </optgroup>
-          </select>
+          <SelectMenu
+            value={settings.dither}
+            groups={DITHER_GROUPS}
+            onChange={(v) => update({ dither: v as Dither })}
+            ariaLabel="dithering"
+          />
         </div>
       </fieldset>
 
