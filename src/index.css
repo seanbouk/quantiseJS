@@ -27,6 +27,9 @@ body {
   padding: 24px 20px 60px;
 }
 
+header {
+  margin-bottom: 22px;
+}
 header h1 {
   margin: 0;
   font-size: 28px;
