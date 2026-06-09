@@ -42,7 +42,7 @@ header p {
 
 .layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 248px 1fr;
   gap: 24px;
   align-items: start;
 }
@@ -238,12 +238,13 @@ fieldset.processing legend {
 .grade-row label {
   font-size: 12px;
   color: var(--muted);
-  width: 74px;
+  width: 82px;
   flex: 0 0 auto;
 }
 .grade-row input[type='range'] {
   flex: 1 1 auto;
   width: auto;
+  min-width: 0;
   accent-color: var(--accent);
 }
 .grade-row .gval {

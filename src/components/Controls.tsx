@@ -252,7 +252,8 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         {gradeRow('brightness', 'brightness', -100, 100)}
         {gradeRow('contrast', 'contrast', -100, 100)}
         {gradeRow('saturation', 'saturation', -100, 100)}
-        {gradeRow('temperature', 'temperature', -100, 100)}
+        {gradeRow('temperature', 'blue–yellow', -100, 100)}
+        {gradeRow('tint', 'green–magenta', -100, 100)}
         {gradeRow('hue', 'hue', -180, 180)}
         <button
           type="button"

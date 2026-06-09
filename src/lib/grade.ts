@@ -4,11 +4,12 @@
 // rather than merely digitised.
 
 export interface Grade {
-  brightness: number // -100..100, additive
+  brightness: number // -100..100, additive lift (shifts the black/white floor)
   contrast: number // -100..100
   saturation: number // -100..100 (negative = toward grey, positive = away)
   hue: number // -180..180 degrees
-  temperature: number // -100..100 (warm <-> cool)
+  temperature: number // -100..100 (blue <-> yellow)
+  tint: number // -100..100 (green <-> magenta)
 }
 
 export const NEUTRAL_GRADE: Grade = {
@@ -17,6 +18,7 @@ export const NEUTRAL_GRADE: Grade = {
   saturation: 0,
   hue: 0,
   temperature: 0,
+  tint: 0,
 }
 
 export function isNeutral(g: Grade): boolean {
@@ -25,7 +27,8 @@ export function isNeutral(g: Grade): boolean {
     g.contrast === 0 &&
     g.saturation === 0 &&
     g.hue === 0 &&
-    g.temperature === 0
+    g.temperature === 0 &&
+    g.tint === 0
   )
 }
 
@@ -38,10 +41,11 @@ export function applyGrade(img: ImageData, g: Grade): ImageData {
   const src = img.data
   const dst = out.data
 
-  const bright = g.brightness / 100 // additive in 0..1 space
+  const bright = g.brightness / 100 // additive lift in 0..1 space
   const contrast = 1 + g.contrast / 100 // 0..2
   const sat = 1 + g.saturation / 100 // 0..2
-  const temp = (g.temperature / 100) * 0.18 // warm = +R / -B
+  const by = (g.temperature / 100) * 0.2 // blue(-) <-> yellow(+)
+  const gm = (g.tint / 100) * 0.2 // green(-) <-> magenta(+)
 
   // luminance-preserving hue rotation matrix (SVG feColorMatrix form)
   const a = (g.hue * Math.PI) / 180
@@ -65,17 +69,19 @@ export function applyGrade(img: ImageData, g: Grade): ImageData {
     let gg = src[i + 1] / 255
     let b = src[i + 2] / 255
 
-    // brightness
-    r += bright
-    gg += bright
-    b += bright
     // contrast (around mid-grey)
     r = (r - 0.5) * contrast + 0.5
     gg = (gg - 0.5) * contrast + 0.5
     b = (b - 0.5) * contrast + 0.5
-    // temperature
-    r += temp
-    b -= temp
+    // brightness — additive lift applied after contrast, so it shifts the
+    // whole tonal range including the black floor
+    r += bright
+    gg += bright
+    b += bright
+    // temperature (blue <-> yellow) and tint (green <-> magenta)
+    r += by + gm
+    gg += by - gm
+    b += -by + gm
     // hue rotation
     if (hueOn) {
       const nr = r * m[0] + gg * m[1] + b * m[2]
