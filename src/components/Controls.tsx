@@ -12,16 +12,17 @@ export interface Settings {
   tileSize: number
   width: number
   height: number
-  smooth: boolean
-  fitMode: FitMode
   attributeGrid: boolean
   maxUniqueTiles: number
   flipH: boolean
   flipV: boolean
   rotate: boolean
+  shadow: boolean
+  highlight: boolean
+  // artistic / processing (not hardware-determined; persist across presets)
+  smooth: boolean
+  fitMode: FitMode
   dither: Dither
-  halfbright: boolean
-  doublebright: boolean
 }
 
 interface Props {
@@ -37,6 +38,8 @@ interface Props {
 export function Controls({ settings, setSettings, onFile, preset, busy, hasImage, onRun }: Props) {
   const update = (patch: Partial<Settings>) => setSettings({ ...settings, ...patch })
 
+  // Switching console resets only the hardware-determined fields; the
+  // processing options (scaling, dithering, filter) carry over deliberately.
   const onPreset = (id: string) => {
     const p = PRESETS.find((x) => x.id === id)!
     update({
@@ -53,6 +56,8 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
       flipH: p.flipH,
       flipV: p.flipV,
       rotate: false,
+      shadow: p.shadow ?? false,
+      highlight: p.highlight ?? false,
     })
   }
 
@@ -89,7 +94,7 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
       </div>
 
       <fieldset>
-        <legend>Output</legend>
+        <legend>Resolution</legend>
         <div className="grid2">
           <div className="field">
             <label>width</label>
@@ -100,18 +105,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
             <input type="number" min={8} max={1024} value={settings.height} onChange={num('height', 8, 1024)} />
           </div>
         </div>
-        <div className="field">
-          <label>scaling</label>
-          <select value={settings.fitMode} onChange={(e) => update({ fitMode: e.target.value as FitMode })}>
-            <option value="stretch">Stretch (fill frame, distort)</option>
-            <option value="fit">Fit (letterbox, keep aspect)</option>
-            <option value="fill">Fill (cover + crop, keep aspect)</option>
-          </select>
-        </div>
-        <label className="check">
-          <input type="checkbox" checked={settings.smooth} onChange={check('smooth')} />
-          Box-filter downscale (off = nearest)
-        </label>
       </fieldset>
 
       <fieldset>
@@ -150,6 +143,16 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
           <input type="checkbox" checked={settings.attributeGrid} onChange={check('attributeGrid')} />
           Attribute grid (palette per 2×2 tiles)
         </label>
+        <div className="checks-row">
+          <label className="check">
+            <input type="checkbox" checked={settings.shadow} onChange={check('shadow')} />
+            shadow
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={settings.highlight} onChange={check('highlight')} />
+            highlight
+          </label>
+        </div>
       </fieldset>
 
       <fieldset>
@@ -186,8 +189,21 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend>Effects</legend>
+      <fieldset className="processing">
+        <legend>Processing</legend>
+        <p className="note">Artistic choices — kept when you switch console.</p>
+        <div className="field">
+          <label>scaling</label>
+          <select value={settings.fitMode} onChange={(e) => update({ fitMode: e.target.value as FitMode })}>
+            <option value="stretch">Stretch (fill frame, distort)</option>
+            <option value="fit">Fit (letterbox, keep aspect)</option>
+            <option value="fill">Fill (cover + crop, keep aspect)</option>
+          </select>
+        </div>
+        <label className="check">
+          <input type="checkbox" checked={settings.smooth} onChange={check('smooth')} />
+          Box-filter downscale (off = nearest)
+        </label>
         <div className="field">
           <label>dithering</label>
           <select value={settings.dither} onChange={(e) => update({ dither: e.target.value as Dither })}>
@@ -196,14 +212,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
             <option value="floyd">Floyd–Steinberg</option>
           </select>
         </div>
-        <label className="check">
-          <input type="checkbox" checked={settings.halfbright} onChange={check('halfbright')} />
-          Half-bright (shadow ×0.5)
-        </label>
-        <label className="check">
-          <input type="checkbox" checked={settings.doublebright} onChange={check('doublebright')} />
-          Double-bright (highlight ×1.5)
-        </label>
       </fieldset>
 
       <button className="run" disabled={!hasImage || busy} onClick={onRun}>

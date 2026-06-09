@@ -22,8 +22,8 @@ export interface QuantiseOptions {
   tileSize: number // dedup block
   depth: DepthMode
   dither: Dither
-  halfbright: boolean // x0.5 brightness variants (Amiga EHB / MD shadow)
-  doublebright: boolean // x1.5 brightness variants (MD highlight)
+  shadow: boolean // x0.5 brightness variants (Mega Drive shadow)
+  highlight: boolean // x1.5 brightness variants (Mega Drive highlight)
   maxUniqueTiles: number // 0 = unlimited
   flipH: boolean
   flipV: boolean
@@ -80,13 +80,13 @@ function applyDepth(c: RGB, depth: DepthMode): RGB {
   }
 }
 
-/** Append half-bright / highlight variants used for matching + display. */
-function expandBrightness(pal: RGB[], half: boolean, double: boolean): RGB[] {
-  if (!half && !double) return pal
+/** Append shadow / highlight variants used for matching + display. */
+function expandBrightness(pal: RGB[], shadow: boolean, highlight: boolean): RGB[] {
+  if (!shadow && !highlight) return pal
   const out = pal.slice()
   const scale = (c: RGB, f: number): RGB => [clamp8(c[0] * f), clamp8(c[1] * f), clamp8(c[2] * f)]
-  if (half) for (const c of pal) out.push(scale(c, 0.5))
-  if (double) for (const c of pal) out.push(scale(c, 1.5))
+  if (shadow) for (const c of pal) out.push(scale(c, 0.5))
+  if (highlight) for (const c of pal) out.push(scale(c, 1.5))
   return out
 }
 
@@ -200,7 +200,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
   //    so shadow/highlight availability influences assignment.
   const assign = new Array<number>(regionCount).fill(0)
   for (let iter = 0; iter < iterations; iter++) {
-    const matchPals = palettes.map((p) => expandBrightness(p, opts.halfbright, opts.doublebright))
+    const matchPals = palettes.map((p) => expandBrightness(p, opts.shadow, opts.highlight))
     for (let i = 0; i < regionCount; i++) {
       let best = 0
       let bestCost = Infinity
@@ -230,7 +230,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
       if (pool.length === 0) {
         let worst = 0
         let worstCost = -1
-        const mp = palettes.map((q) => expandBrightness(q, opts.halfbright, opts.doublebright))
+        const mp = palettes.map((q) => expandBrightness(q, opts.shadow, opts.highlight))
         for (let i = 0; i < regionCount; i++) {
           const c = tileCost(regions[i], mp[assign[i]])
           if (c > worstCost) {
@@ -245,7 +245,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
     }
   }
 
-  const matchPals = palettes.map((p) => expandBrightness(p, opts.halfbright, opts.doublebright))
+  const matchPals = palettes.map((p) => expandBrightness(p, opts.shadow, opts.highlight))
   const regionOf = (x: number, y: number) =>
     Math.floor(y / regionSize) * regionsX + Math.floor(x / regionSize)
 

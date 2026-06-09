@@ -27,6 +27,8 @@ export interface Preset {
   maxUniqueTiles: number // 0 = unlimited
   flipH: boolean
   flipV: boolean
+  shadow?: boolean // Mega Drive shadow mode (x0.5) — optional, defaults off
+  highlight?: boolean // Mega Drive highlight mode (x1.5) — optional, defaults off
   note?: string
 }
 

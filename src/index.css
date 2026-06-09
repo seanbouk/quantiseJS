@@ -146,6 +146,12 @@ legend {
   gap: 14px;
   flex-wrap: wrap;
 }
+fieldset.processing {
+  border-style: dashed;
+}
+fieldset.processing legend {
+  color: var(--muted);
+}
 .stats em {
   color: var(--muted);
   font-style: normal;
