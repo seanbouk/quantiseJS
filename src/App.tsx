@@ -7,6 +7,7 @@ import { imageToImageData, loadImageFile } from './lib/image'
 import type { QuantiseOptions, QuantiseResult } from './lib/quantise'
 import type { WorkerRequest, WorkerResponse } from './lib/worker'
 import { NEUTRAL_GRADE } from './lib/grade'
+import { buildExport } from './lib/export'
 import { presetById, PRESETS } from './lib/presets'
 
 function defaultSettings(): Settings {
@@ -40,6 +41,7 @@ export default function App() {
   const [img, setImg] = useState<HTMLImageElement | null>(null)
   const [result, setResult] = useState<QuantiseResult | null>(null)
   const [busy, setBusy] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const fileName = useRef<string>('image')
 
   const preset = useMemo(() => presetById(settings.presetId), [settings.presetId])
@@ -50,27 +52,29 @@ export default function App() {
   useEffect(() => {
     const w = new Worker(new URL('./lib/worker.ts', import.meta.url), { type: 'module' })
     w.onmessage = (e: MessageEvent<WorkerResponse>) => {
-      if (e.data.id !== reqId.current) return // stale
-      setResult({ imageData: e.data.imageData, palettes: e.data.palettes, stats: e.data.stats })
+      const d = e.data
+      if (d.exportData) {
+        // export response — build the files, leave the preview untouched
+        buildExport(fileName.current, d.palettes, d.exportData)
+        setExporting(false)
+        return
+      }
+      if (d.id !== reqId.current) return // stale preview
+      setResult({ imageData: d.imageData, palettes: d.palettes, stats: d.stats })
       setBusy(false)
     }
     workerRef.current = w
     return () => w.terminate()
   }, [])
 
-  const run = useCallback(() => {
-    const w = workerRef.current
-    if (!img || !w) return
-    setBusy(true)
-    // Resize (needs canvas/DOM) on the main thread; grade + quantise in the worker.
-    const input = imageToImageData(
-      img,
-      settings.width,
-      settings.height,
-      settings.downscale,
-      settings.fitMode,
-    )
-    const opts: QuantiseOptions = {
+  const makeInput = useCallback(
+    () =>
+      imageToImageData(img!, settings.width, settings.height, settings.downscale, settings.fitMode),
+    [img, settings],
+  )
+
+  const makeOpts = useCallback(
+    (collectMap: boolean): QuantiseOptions => ({
       palettes: settings.palettes,
       colorsPerPalette: settings.colorsPerPalette,
       maxColorsPerTile: settings.maxColorsPerTile,
@@ -87,10 +91,37 @@ export default function App() {
       flipH: settings.flipH,
       flipV: settings.flipV,
       rotate: settings.rotate,
+      collectMap,
+    }),
+    [settings, preset],
+  )
+
+  const run = useCallback(() => {
+    const w = workerRef.current
+    if (!img || !w) return
+    setBusy(true)
+    const req: WorkerRequest = {
+      id: ++reqId.current,
+      imageData: makeInput(),
+      grade: settings.grade,
+      opts: makeOpts(false),
     }
-    const req: WorkerRequest = { id: ++reqId.current, imageData: input, grade: settings.grade, opts }
     w.postMessage(req)
-  }, [img, settings, preset])
+  }, [img, settings.grade, makeInput, makeOpts])
+
+  const exportTiles = useCallback(() => {
+    const w = workerRef.current
+    if (!img || !w) return
+    setExporting(true)
+    // id 0 is never used by previews (reqId starts at 1), routed via exportData
+    const req: WorkerRequest = {
+      id: 0,
+      imageData: makeInput(),
+      grade: settings.grade,
+      opts: makeOpts(true),
+    }
+    w.postMessage(req)
+  }, [img, settings.grade, makeInput, makeOpts])
 
   // Auto-process whenever the image or settings change, debounced so dragging
   // sliders coalesces into a single run.
@@ -132,6 +163,8 @@ export default function App() {
             busy={busy}
             maxUniqueTiles={settings.maxUniqueTiles}
             onMaxUnique={(n) => setSettings({ ...settings, maxUniqueTiles: n })}
+            onExport={exportTiles}
+            exporting={exporting}
           />
           {img && (
             <div className="bottom-row">

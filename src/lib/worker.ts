@@ -16,6 +16,7 @@ export interface WorkerResponse {
   imageData: ImageData
   palettes: QuantiseResult['palettes']
   stats: QuantiseResult['stats']
+  exportData?: QuantiseResult['exportData']
 }
 
 const ctx = self as unknown as {
@@ -27,5 +28,11 @@ ctx.onmessage = (e) => {
   const { id, imageData, grade, opts } = e.data
   const graded = applyGrade(imageData, grade)
   const res = quantise(graded, opts)
-  ctx.postMessage({ id, imageData: res.imageData, palettes: res.palettes, stats: res.stats })
+  ctx.postMessage({
+    id,
+    imageData: res.imageData,
+    palettes: res.palettes,
+    stats: res.stats,
+    exportData: res.exportData,
+  })
 }

@@ -8,6 +8,8 @@ interface Props {
   busy: boolean
   maxUniqueTiles: number
   onMaxUnique: (n: number) => void
+  onExport: () => void
+  exporting: boolean
 }
 
 /** Slider for the unique-tile budget. Max = the natural unique-tile count;
@@ -47,7 +49,16 @@ function TileSlider({
   )
 }
 
-export function CanvasView({ img, result, fileName, busy, maxUniqueTiles, onMaxUnique }: Props) {
+export function CanvasView({
+  img,
+  result,
+  fileName,
+  busy,
+  maxUniqueTiles,
+  onMaxUnique,
+  onExport,
+  exporting,
+}: Props) {
   const outRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -114,6 +125,9 @@ export function CanvasView({ img, result, fileName, busy, maxUniqueTiles, onMaxU
             </span>
             <button className="dl" onClick={download}>
               Download PNG
+            </button>
+            <button className="dl" onClick={onExport} disabled={exporting}>
+              {exporting ? 'Exporting…' : 'Export tiles'}
             </button>
           </div>
         </>

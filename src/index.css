@@ -355,6 +355,10 @@ canvas {
   cursor: pointer;
   font-size: 13px;
 }
+.dl:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
 .tile-slider {
   display: flex;

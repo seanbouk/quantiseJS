@@ -18,12 +18,25 @@ export interface DedupOptions {
   rotate: boolean // 90° rotations (square tiles only); 180° works for any shape
   maxUniqueTiles: number // 0 = unlimited (just report the natural count)
   iterations?: number
+  collectMap?: boolean // also emit per-cell tilemap + unique-tile pixels (for export)
+}
+
+export interface TileMapEntry {
+  tile: number // index into uniqueTiles
+  fx: boolean // draw flipped horizontally
+  fy: boolean // draw flipped vertically
+  rot: number // 0 / 90 / 270 (90/270 square only)
 }
 
 export interface DedupResult {
   pixels: RGB[] // grid after any merging (unchanged if no reduction needed)
   naturalUnique: number // distinct tiles under flip-equivalence, before reduction
   uniqueCount: number // distinct tiles actually used after reduction
+  tilesX: number
+  tilesY: number
+  // present only when collectMap was requested:
+  map?: TileMapEntry[] // row-major per cell
+  uniqueTiles?: number[][] // each a flat RGB array (tileW*tileH*3), canonical orientation
 }
 
 type TKey = 'id' | 'h' | 'v' | 'hv' | 'r90' | 'r270'
@@ -52,6 +65,24 @@ function srcCoord(key: TKey, x: number, y: number, W: number, H: number): [numbe
       return [y, W - 1 - x] // square only
     case 'r270':
       return [H - 1 - y, x] // square only
+  }
+}
+
+/** Draw flags for a transform key (used to express the tilemap). */
+function keyFlags(k: TKey): { fx: boolean; fy: boolean; rot: number } {
+  switch (k) {
+    case 'id':
+      return { fx: false, fy: false, rot: 0 }
+    case 'h':
+      return { fx: true, fy: false, rot: 0 }
+    case 'v':
+      return { fx: false, fy: true, rot: 0 }
+    case 'hv':
+      return { fx: true, fy: true, rot: 0 }
+    case 'r90':
+      return { fx: false, fy: false, rot: 90 }
+    case 'r270':
+      return { fx: false, fy: false, rot: 270 }
   }
 }
 
@@ -114,19 +145,30 @@ export function dedupeTiles(
     }
   }
 
+  const round3 = (f: Float32Array): number[] => {
+    const a = new Array<number>(n * 3)
+    for (let i = 0; i < n * 3; i++) a[i] = Math.round(f[i])
+    return a
+  }
+
   // Natural unique count: canonical key = min serialisation over allowed transforms.
   const groupCount = new Map<string, number>()
   const groupRep = new Map<string, Float32Array>()
+  const cellKey: string[] = new Array(P) // canonical key per cell
+  const cellWin: TKey[] = new Array(P) // transform that canonicalised the cell
   for (let i = 0; i < P; i++) {
-    const { key, rep } = canonical(tiles[i])
+    const { key, rep, tkey } = canonical(tiles[i])
+    cellKey[i] = key
+    cellWin[i] = tkey
     groupCount.set(key, (groupCount.get(key) ?? 0) + 1)
     if (!groupRep.has(key)) groupRep.set(key, rep)
   }
   const naturalUnique = groupCount.size
 
-  function canonical(tile: Float32Array): { key: string; rep: Float32Array } {
+  function canonical(tile: Float32Array): { key: string; rep: Float32Array; tkey: TKey } {
     let bestKey = ''
     let bestRep: Float32Array | null = null
+    let bestT: TKey = 'id'
     for (const k of keys) {
       const map = mapByKey.get(k)!
       let s = ''
@@ -144,14 +186,32 @@ export function dedupeTiles(
       if (bestRep === null || s < bestKey) {
         bestKey = s
         bestRep = rep
+        bestT = k
       }
     }
-    return { key: bestKey, rep: bestRep! }
+    return { key: bestKey, rep: bestRep!, tkey: bestT }
   }
 
-  // No reduction needed — return as-is.
+  // No reduction needed — return as-is (with optional tilemap).
   if (opts.maxUniqueTiles <= 0 || naturalUnique <= opts.maxUniqueTiles) {
-    return { pixels: px, naturalUnique, uniqueCount: naturalUnique }
+    let map: TileMapEntry[] | undefined
+    let uniqueTiles: number[][] | undefined
+    if (opts.collectMap) {
+      const idxOf = new Map<string, number>()
+      uniqueTiles = []
+      map = new Array(P)
+      for (let p = 0; p < P; p++) {
+        let idx = idxOf.get(cellKey[p])
+        if (idx === undefined) {
+          idx = uniqueTiles.length
+          idxOf.set(cellKey[p], idx)
+          uniqueTiles.push(round3(groupRep.get(cellKey[p])!))
+        }
+        // cell = INVERSE[canonicalising transform] applied to the stored tile
+        map[p] = { tile: idx, ...keyFlags(INVERSE[cellWin[p]]) }
+      }
+    }
+    return { pixels: px, naturalUnique, uniqueCount: naturalUnique, tilesX, tilesY, map, uniqueTiles }
   }
 
   // ---- Transform-aware k-means to merge tiles down to the budget ----
@@ -254,5 +314,22 @@ export function dedupeTiles(
     }
   }
 
-  return { pixels: out, naturalUnique, uniqueCount: used.size }
+  let map: TileMapEntry[] | undefined
+  let uniqueTiles: number[][] | undefined
+  if (opts.collectMap) {
+    // compact used centroids to a dense index space
+    const compact = new Map<number, number>()
+    uniqueTiles = []
+    for (const c of used) {
+      compact.set(c, uniqueTiles.length)
+      uniqueTiles.push(round3(centroids[c]))
+    }
+    map = new Array(P)
+    for (let p = 0; p < P; p++) {
+      // cell = INVERSE[keys[assignT]] applied to the stored centroid
+      map[p] = { tile: compact.get(assignC[p])!, ...keyFlags(INVERSE[keys[assignT[p]]]) }
+    }
+  }
+
+  return { pixels: out, naturalUnique, uniqueCount: used.size, tilesX, tilesY, map, uniqueTiles }
 }

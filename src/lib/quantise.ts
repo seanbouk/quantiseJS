@@ -8,7 +8,7 @@ import {
   type RGB,
 } from './color'
 import type { DepthMode } from './presets'
-import { dedupeTiles } from './tiles'
+import { dedupeTiles, type TileMapEntry } from './tiles'
 
 export type Dither =
   // ordered (threshold matrices)
@@ -53,6 +53,7 @@ export interface QuantiseOptions {
   flipV: boolean
   rotate: boolean
   iterations?: number
+  collectMap?: boolean // also produce export data (tilemap, unique tiles, per-cell palette)
 }
 
 export interface QuantiseStats {
@@ -68,10 +69,21 @@ export interface QuantiseStats {
   tilesY: number
 }
 
+export interface ExportData {
+  tileW: number
+  tileH: number
+  tilesX: number
+  tilesY: number
+  uniqueTiles: number[][] // flat RGB (tileW*tileH*3), canonical orientation
+  map: TileMapEntry[] // row-major per cell: tile index + flip/rotate
+  cellPalette: number[] // palette index per cell (row-major)
+}
+
 export interface QuantiseResult {
   imageData: ImageData
   palettes: RGB[][] // expanded (incl. brightness variants) for display
   stats: QuantiseStats
+  exportData?: ExportData // present only when collectMap requested
 }
 
 interface Region {
@@ -553,6 +565,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
     flipV: opts.flipV,
     rotate: opts.rotate,
     maxUniqueTiles: opts.maxUniqueTiles,
+    collectMap: opts.collectMap,
   })
   let finalPx = dedup.pixels
   // Re-clamp merged tiles back onto their region palette to stay legal.
@@ -580,9 +593,34 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
     usedColors.add((c[0] << 16) | (c[1] << 8) | c[2])
   }
 
+  // Export data: palette index per tile cell (from its region assignment).
+  let exportData: ExportData | undefined
+  if (opts.collectMap && dedup.map && dedup.uniqueTiles) {
+    const txN = dedup.tilesX
+    const tyN = dedup.tilesY
+    const cellPalette = new Array<number>(txN * tyN)
+    for (let ty = 0; ty < tyN; ty++) {
+      for (let tx = 0; tx < txN; tx++) {
+        const cx = Math.min(tx * opts.tileW + (opts.tileW >> 1), width - 1)
+        const cy = Math.min(ty * opts.tileH + (opts.tileH >> 1), height - 1)
+        cellPalette[ty * txN + tx] = assign[regionOf(cx, cy)]
+      }
+    }
+    exportData = {
+      tileW: opts.tileW,
+      tileH: opts.tileH,
+      tilesX: txN,
+      tilesY: tyN,
+      uniqueTiles: dedup.uniqueTiles,
+      map: dedup.map,
+      cellPalette,
+    }
+  }
+
   return {
     imageData: out,
     palettes: matchPals,
+    exportData,
     stats: {
       width,
       height,
