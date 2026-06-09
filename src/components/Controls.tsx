@@ -66,12 +66,10 @@ interface Props {
   setSettings: (s: Settings) => void
   onFile: (f: File) => void
   preset: Preset
-  busy: boolean
   hasImage: boolean
-  onRun: () => void
 }
 
-export function Controls({ settings, setSettings, onFile, preset, busy, hasImage, onRun }: Props) {
+export function Controls({ settings, setSettings, onFile, preset, hasImage }: Props) {
   const update = (patch: Partial<Settings>) => setSettings({ ...settings, ...patch })
 
   // Switching console resets only the hardware-determined fields; the
@@ -250,7 +248,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
 
       <fieldset className="processing">
         <legend>Colour grade</legend>
-        <p className="note">Applied to the source before quantising — push away from grey, toward friendlier hues.</p>
         {gradeRow('brightness', 'brightness', -100, 100)}
         {gradeRow('contrast', 'contrast', -100, 100)}
         {gradeRow('saturation', 'saturation', -100, 100)}
@@ -268,7 +265,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
 
       <fieldset className="processing">
         <legend>Processing</legend>
-        <p className="note">Artistic choices — kept when you switch console.</p>
         <div className="field">
           <label>scaling</label>
           <select value={settings.fitMode} onChange={(e) => update({ fitMode: e.target.value as FitMode })}>
@@ -299,9 +295,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         </div>
       </fieldset>
 
-      <button className="run" disabled={!hasImage || busy} onClick={onRun}>
-        {busy ? 'Processing…' : 'Re-process'}
-      </button>
     </aside>
   )
 }

@@ -269,20 +269,6 @@ fieldset.processing legend {
   font-style: normal;
 }
 
-.run {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  color: var(--text);
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.run:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 /* Canvas */
 main {
   display: flex;

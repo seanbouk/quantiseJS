@@ -98,7 +98,6 @@ export default function App() {
         <h1>
           quantise<span>JS</span>
         </h1>
-        <p>Quantise images into Gen&nbsp;3 / Gen&nbsp;4 tile-console graphics.</p>
       </header>
 
       <div className="layout">
@@ -107,8 +106,6 @@ export default function App() {
           setSettings={setSettings}
           onFile={onFile}
           preset={preset}
-          busy={busy}
-          onRun={run}
           hasImage={!!img}
         />
 
