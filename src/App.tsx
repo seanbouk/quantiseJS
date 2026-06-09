@@ -106,7 +106,14 @@ export default function App() {
         />
 
         <main>
-          <CanvasView img={img} result={result} fileName={fileName.current} busy={busy} />
+          <CanvasView
+            img={img}
+            result={result}
+            fileName={fileName.current}
+            busy={busy}
+            maxUniqueTiles={settings.maxUniqueTiles}
+            onMaxUnique={(n) => setSettings({ ...settings, maxUniqueTiles: n })}
+          />
           {img && (
             <div className="bottom-row">
               <SourceView img={img} />

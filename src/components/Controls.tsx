@@ -72,6 +72,22 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
 
   return (
     <aside className="controls">
+      <datalist id="opt-palettes">
+        {[1, 2, 4, 8, 16].map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
+      <datalist id="opt-colors">
+        {[2, 4, 8, 16, 32, 64, 256].map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
+      <datalist id="opt-tile">
+        {[4, 8, 16, 32].map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
+
       <label className="file">
         <input
           type="file"
@@ -112,12 +128,20 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         <div className="grid2">
           <div className="field">
             <label># palettes</label>
-            <input type="number" min={1} max={16} value={settings.palettes} onChange={num('palettes', 1, 16)} />
+            <input
+              type="number"
+              list="opt-palettes"
+              min={1}
+              max={16}
+              value={settings.palettes}
+              onChange={num('palettes', 1, 16)}
+            />
           </div>
           <div className="field">
             <label>colours / palette</label>
             <input
               type="number"
+              list="opt-colors"
               min={2}
               max={256}
               value={settings.colorsPerPalette}
@@ -128,6 +152,7 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
             <label>max colours / tile</label>
             <input
               type="number"
+              list="opt-colors"
               min={2}
               max={256}
               value={settings.maxColorsPerTile}
@@ -160,16 +185,13 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         <div className="grid2">
           <div className="field">
             <label>tile size</label>
-            <input type="number" min={1} max={64} value={settings.tileSize} onChange={num('tileSize', 1, 64)} />
-          </div>
-          <div className="field">
-            <label>max unique (0=∞)</label>
             <input
               type="number"
-              min={0}
-              max={8192}
-              value={settings.maxUniqueTiles}
-              onChange={num('maxUniqueTiles', 0, 8192)}
+              list="opt-tile"
+              min={1}
+              max={64}
+              value={settings.tileSize}
+              onChange={num('tileSize', 1, 64)}
             />
           </div>
         </div>

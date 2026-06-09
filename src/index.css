@@ -255,6 +255,31 @@ canvas {
   font-size: 13px;
 }
 
+.tile-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.tile-slider label {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tile-slider input[type='range'] {
+  flex: 1 1 auto;
+  accent-color: var(--accent);
+  width: auto;
+}
+.tile-slider .val {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  min-width: 92px;
+  text-align: right;
+}
+
 .stats {
   margin-top: 10px;
   display: flex;
