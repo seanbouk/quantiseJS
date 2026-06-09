@@ -237,7 +237,7 @@ export function Controls({ settings, setSettings, onFile, preset, hasImage }: Pr
               value={settings.tileHeight}
               min={1}
               max={512}
-              options={[4, 8, 16, 32, 64, 128]}
+              options={[4, 8, 16, 32, 64, 128, 256, 512]}
               onChange={(v) => update({ tileHeight: v })}
               ariaLabel="tile height"
             />
