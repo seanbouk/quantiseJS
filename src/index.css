@@ -42,7 +42,7 @@ header p {
 
 .layout {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 24px;
   align-items: start;
 }
@@ -232,27 +232,27 @@ fieldset.processing legend {
 
 .grade-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
 }
-.grade-row label {
+.grade-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.grade-head label {
   font-size: 12px;
   color: var(--muted);
-  width: 82px;
-  flex: 0 0 auto;
 }
-.grade-row input[type='range'] {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-  accent-color: var(--accent);
-}
-.grade-row .gval {
+.grade-head .gval {
   font-size: 12px;
   color: var(--text);
-  width: 34px;
-  text-align: right;
   font-variant-numeric: tabular-nums;
+}
+.grade-row input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent);
 }
 .reset-grade {
   align-self: flex-start;

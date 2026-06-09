@@ -108,7 +108,10 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
 
   const gradeRow = (key: keyof Grade, label: string, min: number, max: number) => (
     <div className="grade-row">
-      <label>{label}</label>
+      <div className="grade-head">
+        <label>{label}</label>
+        <span className="gval">{settings.grade[key]}</span>
+      </div>
       <input
         type="range"
         min={min}
@@ -116,7 +119,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         value={settings.grade[key]}
         onChange={(e) => update({ grade: { ...settings.grade, [key]: Number(e.target.value) } })}
       />
-      <span className="gval">{settings.grade[key]}</span>
     </div>
   )
 
