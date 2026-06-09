@@ -2,6 +2,7 @@ import { type ChangeEvent } from 'react'
 import { PRESETS, type Preset } from '../lib/presets'
 import { Combo } from './Combo'
 import { SelectMenu, type SelectGroup } from './SelectMenu'
+import { NEUTRAL_GRADE, type Grade } from '../lib/grade'
 import type { DownscaleMode, FitMode } from '../lib/image'
 import type { Dither } from '../lib/quantise'
 
@@ -57,6 +58,7 @@ export interface Settings {
   downscale: DownscaleMode
   fitMode: FitMode
   dither: Dither
+  grade: Grade
 }
 
 interface Props {
@@ -103,6 +105,20 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
 
   const check = (key: keyof Settings) => (e: ChangeEvent<HTMLInputElement>) =>
     update({ [key]: e.target.checked } as Partial<Settings>)
+
+  const gradeRow = (key: keyof Grade, label: string, min: number, max: number) => (
+    <div className="grade-row">
+      <label>{label}</label>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={settings.grade[key]}
+        onChange={(e) => update({ grade: { ...settings.grade, [key]: Number(e.target.value) } })}
+      />
+      <span className="gval">{settings.grade[key]}</span>
+    </div>
+  )
 
   return (
     <aside className="controls">
@@ -228,6 +244,23 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
             rotate 90°
           </label>
         </div>
+      </fieldset>
+
+      <fieldset className="processing">
+        <legend>Colour grade</legend>
+        <p className="note">Applied to the source before quantising — push away from grey, toward friendlier hues.</p>
+        {gradeRow('brightness', 'brightness', -100, 100)}
+        {gradeRow('contrast', 'contrast', -100, 100)}
+        {gradeRow('saturation', 'saturation', -100, 100)}
+        {gradeRow('temperature', 'temperature', -100, 100)}
+        {gradeRow('hue', 'hue', -180, 180)}
+        <button
+          type="button"
+          className="reset-grade"
+          onClick={() => update({ grade: { ...NEUTRAL_GRADE } })}
+        >
+          Reset grade
+        </button>
       </fieldset>
 
       <fieldset className="processing">

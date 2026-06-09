@@ -5,6 +5,7 @@ import { SourceView } from './components/SourceView'
 import { PaletteView } from './components/PaletteView'
 import { imageToImageData, loadImageFile } from './lib/image'
 import { quantise, type QuantiseResult } from './lib/quantise'
+import { applyGrade, NEUTRAL_GRADE } from './lib/grade'
 import { presetById, PRESETS } from './lib/presets'
 
 function defaultSettings(): Settings {
@@ -28,6 +29,7 @@ function defaultSettings(): Settings {
     downscale: 'nearest',
     fitMode: 'fill',
     dither: 'none',
+    grade: { ...NEUTRAL_GRADE },
   }
 }
 
@@ -45,13 +47,15 @@ export default function App() {
     setBusy(true)
     // Yield to the browser so the busy state paints before we block.
     setTimeout(() => {
-      const input = imageToImageData(
+      let input = imageToImageData(
         img,
         settings.width,
         settings.height,
         settings.downscale,
         settings.fitMode,
       )
+      // Colour grade the source before quantising.
+      input = applyGrade(input, settings.grade)
       const res = quantise(input, {
         palettes: settings.palettes,
         colorsPerPalette: settings.colorsPerPalette,
@@ -73,9 +77,12 @@ export default function App() {
     }, 0)
   }, [img, settings, preset])
 
-  // Auto-process whenever the image or settings change.
+  // Auto-process whenever the image or settings change, debounced so dragging
+  // sliders coalesces into a single run.
   useEffect(() => {
-    if (img) run()
+    if (!img) return
+    const t = setTimeout(run, 120)
+    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [img, settings])
 
