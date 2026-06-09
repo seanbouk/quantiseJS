@@ -228,7 +228,10 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
               <option value="bayer4">Bayer 4×4</option>
               <option value="bayer8">Bayer 8×8</option>
               <option value="cluster4">Clustered dot 4×4</option>
-              <option value="blue">Blue noise (void-and-cluster)</option>
+              <option value="blue">Blue noise</option>
+              <option value="linesV">Vertical lines</option>
+              <option value="linesH">Horizontal lines</option>
+              <option value="linesD">Diagonal lines</option>
             </optgroup>
             <optgroup label="Error diffusion">
               <option value="floyd">Floyd–Steinberg</option>
@@ -242,7 +245,7 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
               <option value="sierraLite">Sierra Lite</option>
             </optgroup>
             <optgroup label="Stochastic">
-              <option value="random">Random (white noise)</option>
+              <option value="random">White noise</option>
             </optgroup>
           </select>
         </div>

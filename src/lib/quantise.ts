@@ -18,6 +18,9 @@ export type Dither =
   | 'bayer8'
   | 'cluster4'
   | 'blue'
+  | 'linesV'
+  | 'linesH'
+  | 'linesD'
   // error diffusion
   | 'floyd'
   | 'falseFloyd'
@@ -74,9 +77,31 @@ interface Region {
   avg: RGB
 }
 
-// Ordered threshold matrices. Values 0..(n*n-1); normalised to a [-0.5,0.5)
-// offset at render time. Includes Bayer (recursive) sizes + a clustered-dot
-// (halftone) matrix.
+// Line-screen matrices: threshold varies along ONE axis only, so equal-value
+// contours form stripes. A bit-reversed (dispersed) order spreads the lines
+// evenly across the tonal range instead of growing them from one edge.
+function lineMatrix(period: number, axis: 'v' | 'h' | 'd'): number[][] {
+  const bits = Math.round(Math.log2(period))
+  const order = new Array<number>(period)
+  for (let i = 0; i < period; i++) {
+    let r = 0
+    for (let b = 0; b < bits; b++) if (i & (1 << b)) r |= 1 << (bits - 1 - b)
+    order[i] = r
+  }
+  const m: number[][] = []
+  for (let y = 0; y < period; y++) {
+    const row: number[] = []
+    for (let x = 0; x < period; x++) {
+      row.push(axis === 'v' ? order[x] : axis === 'h' ? order[y] : order[(x + y) % period])
+    }
+    m.push(row)
+  }
+  return m
+}
+
+// Ordered threshold matrices. Normalised to a [-0.5,0.5) offset at render time
+// using each matrix's own value range. Bayer (recursive), clustered-dot
+// (halftone), and line-screen patterns.
 const ORDERED: Record<string, number[][]> = {
   bayer2: [
     [0, 2],
@@ -104,6 +129,9 @@ const ORDERED: Record<string, number[][]> = {
     [11, 3, 2, 8],
     [15, 10, 9, 14],
   ],
+  linesV: lineMatrix(16, 'v'),
+  linesH: lineMatrix(16, 'h'),
+  linesD: lineMatrix(16, 'd'),
 }
 const DITHER_AMP = 36
 
@@ -483,7 +511,14 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
   } else if (matrix || opts.dither === 'random') {
     // Ordered / stochastic: bias the source by a threshold offset, then map.
     const n = matrix ? matrix.length : 0
-    const denom = n * n
+    // normalise by the matrix's own value range (handles line screens, which
+    // have fewer distinct levels than a full n*n Bayer permutation)
+    let denom = 1
+    if (matrix) {
+      let mx = 0
+      for (const row of matrix) for (const v of row) if (v > mx) mx = v
+      denom = mx + 1
+    }
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = y * width + x
