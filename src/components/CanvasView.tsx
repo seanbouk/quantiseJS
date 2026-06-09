@@ -77,7 +77,14 @@ export function CanvasView({ img, result, fileName, busy }: Props) {
       {result && (
         <div className="stats">
           <span>
-            <b>{result.stats.tileCount}</b> tiles ({result.stats.tilesX}×{result.stats.tilesY})
+            <b>{result.stats.tilesX * result.stats.tilesY}</b> tiles ({result.stats.tilesX}×
+            {result.stats.tilesY})
+          </span>
+          <span>
+            <b>{result.stats.uniqueTiles}</b> unique tiles
+            {result.stats.uniqueTiles !== result.stats.naturalUniqueTiles && (
+              <em> (from {result.stats.naturalUniqueTiles})</em>
+            )}
           </span>
           <span>
             <b>{result.stats.palettesUsed}</b> palettes used

@@ -18,6 +18,15 @@ function defaultSettings(): Settings {
     width: p.width,
     height: p.height,
     smooth: false,
+    fitMode: 'fill',
+    attributeGrid: p.attributeGrid,
+    maxUniqueTiles: p.maxUniqueTiles,
+    flipH: p.flipH,
+    flipV: p.flipV,
+    rotate: false,
+    dither: 'none',
+    halfbright: false,
+    doublebright: false,
   }
 }
 
@@ -35,14 +44,28 @@ export default function App() {
     setBusy(true)
     // Yield to the browser so the busy state paints before we block.
     setTimeout(() => {
-      const input = imageToImageData(img, settings.width, settings.height, settings.smooth)
+      const input = imageToImageData(
+        img,
+        settings.width,
+        settings.height,
+        settings.smooth,
+        settings.fitMode,
+      )
       const res = quantise(input, {
         palettes: settings.palettes,
         colorsPerPalette: settings.colorsPerPalette,
         maxColorsPerTile: settings.maxColorsPerTile,
         sharedBg: settings.sharedBg,
+        regionSize: settings.attributeGrid ? settings.tileSize * 2 : settings.tileSize,
         tileSize: settings.tileSize,
         depth: preset.depth,
+        dither: settings.dither,
+        halfbright: settings.halfbright,
+        doublebright: settings.doublebright,
+        maxUniqueTiles: settings.maxUniqueTiles,
+        flipH: settings.flipH,
+        flipV: settings.flipV,
+        rotate: settings.rotate,
       })
       setResult(res)
       setBusy(false)

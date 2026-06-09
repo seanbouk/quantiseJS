@@ -23,6 +23,11 @@ export interface Preset {
   width: number
   height: number
   depth: DepthMode
+  // tile / hardware-quirk defaults
+  attributeGrid: boolean // assign palette per 2x2 tile block (NES)
+  maxUniqueTiles: number // 0 = unlimited
+  flipH: boolean
+  flipV: boolean
   note?: string
 }
 
@@ -54,7 +59,11 @@ export const PRESETS: Preset[] = [
     width: 256,
     height: 240,
     depth: { kind: 'fixed', palette: NES_PALETTE },
-    note: 'Fixed 54-colour PPU palette, 4 palettes of 3 + shared backdrop.',
+    attributeGrid: true,
+    maxUniqueTiles: 256, // one pattern table
+    flipH: false, // NES background tiles cannot flip (sprites only)
+    flipV: false,
+    note: 'Fixed 54-colour PPU palette, 4 palettes of 3 + shared backdrop. Palette assigned per 16×16 attribute block; BG tiles cannot flip.',
   },
   {
     id: 'sms',
@@ -68,6 +77,10 @@ export const PRESETS: Preset[] = [
     width: 256,
     height: 192,
     depth: { kind: 'bits', bits: 2 },
+    attributeGrid: false,
+    maxUniqueTiles: 448,
+    flipH: true,
+    flipV: true,
     note: '2 bits/channel (64 colours), one 16-colour background palette.',
   },
   {
@@ -82,7 +95,11 @@ export const PRESETS: Preset[] = [
     width: 320,
     height: 224,
     depth: { kind: 'bits', bits: 3 },
-    note: '3 bits/channel (512 colours), 4 palettes of 16 (index 0 transparent).',
+    attributeGrid: false,
+    maxUniqueTiles: 1500,
+    flipH: true,
+    flipV: true,
+    note: '3 bits/channel (512 colours), 4 palettes of 16 (index 0 transparent). Try the shadow/highlight (half/double bright) effect.',
   },
   {
     id: 'snes',
@@ -96,6 +113,10 @@ export const PRESETS: Preset[] = [
     width: 256,
     height: 224,
     depth: { kind: 'bits', bits: 5 },
+    attributeGrid: false,
+    maxUniqueTiles: 1024,
+    flipH: true,
+    flipV: true,
     note: '5 bits/channel (32768 colours), up to 8 palettes of 16.',
   },
   {
@@ -110,6 +131,10 @@ export const PRESETS: Preset[] = [
     width: 256,
     height: 240,
     depth: { kind: 'none' },
+    attributeGrid: false,
+    maxUniqueTiles: 0,
+    flipH: true,
+    flipV: true,
     note: 'Full 24-bit colour. Set every limit yourself.',
   },
 ]
