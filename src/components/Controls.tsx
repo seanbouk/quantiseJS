@@ -223,8 +223,26 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
           <label>dithering</label>
           <select value={settings.dither} onChange={(e) => update({ dither: e.target.value as Dither })}>
             <option value="none">None</option>
-            <option value="bayer">Ordered (Bayer 8×8)</option>
-            <option value="floyd">Floyd–Steinberg</option>
+            <optgroup label="Ordered">
+              <option value="bayer2">Bayer 2×2</option>
+              <option value="bayer4">Bayer 4×4</option>
+              <option value="bayer8">Bayer 8×8</option>
+              <option value="cluster4">Clustered dot 4×4</option>
+            </optgroup>
+            <optgroup label="Error diffusion">
+              <option value="floyd">Floyd–Steinberg</option>
+              <option value="falseFloyd">False Floyd–Steinberg</option>
+              <option value="jjn">Jarvis–Judice–Ninke</option>
+              <option value="stucki">Stucki</option>
+              <option value="atkinson">Atkinson</option>
+              <option value="burkes">Burkes</option>
+              <option value="sierra">Sierra (3-row)</option>
+              <option value="sierra2">Sierra (2-row)</option>
+              <option value="sierraLite">Sierra Lite</option>
+            </optgroup>
+            <optgroup label="Stochastic">
+              <option value="random">Random (white noise)</option>
+            </optgroup>
           </select>
         </div>
       </fieldset>

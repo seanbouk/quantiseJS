@@ -10,7 +10,25 @@ import {
 import type { DepthMode } from './presets'
 import { dedupeTiles } from './tiles'
 
-export type Dither = 'none' | 'bayer' | 'floyd'
+export type Dither =
+  // ordered (threshold matrices)
+  | 'none'
+  | 'bayer2'
+  | 'bayer4'
+  | 'bayer8'
+  | 'cluster4'
+  // error diffusion
+  | 'floyd'
+  | 'falseFloyd'
+  | 'jjn'
+  | 'stucki'
+  | 'atkinson'
+  | 'burkes'
+  | 'sierra'
+  | 'sierra2'
+  | 'sierraLite'
+  // stochastic
+  | 'random'
 
 export interface QuantiseOptions {
   palettes: number
@@ -55,17 +73,84 @@ interface Region {
   avg: RGB
 }
 
-const BAYER8 = [
-  [0, 32, 8, 40, 2, 34, 10, 42],
-  [48, 16, 56, 24, 50, 18, 58, 26],
-  [12, 44, 4, 36, 14, 46, 6, 38],
-  [60, 28, 52, 20, 62, 30, 54, 22],
-  [3, 35, 11, 43, 1, 33, 9, 41],
-  [51, 19, 59, 27, 49, 17, 57, 25],
-  [15, 47, 7, 39, 13, 45, 5, 37],
-  [63, 31, 55, 23, 61, 29, 53, 21],
-]
-const BAYER_AMP = 32
+// Ordered threshold matrices. Values 0..(n*n-1); normalised to a [-0.5,0.5)
+// offset at render time. Includes Bayer (recursive) sizes + a clustered-dot
+// (halftone) matrix.
+const ORDERED: Record<string, number[][]> = {
+  bayer2: [
+    [0, 2],
+    [3, 1],
+  ],
+  bayer4: [
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5],
+  ],
+  bayer8: [
+    [0, 32, 8, 40, 2, 34, 10, 42],
+    [48, 16, 56, 24, 50, 18, 58, 26],
+    [12, 44, 4, 36, 14, 46, 6, 38],
+    [60, 28, 52, 20, 62, 30, 54, 22],
+    [3, 35, 11, 43, 1, 33, 9, 41],
+    [51, 19, 59, 27, 49, 17, 57, 25],
+    [15, 47, 7, 39, 13, 45, 5, 37],
+    [63, 31, 55, 23, 61, 29, 53, 21],
+  ],
+  cluster4: [
+    [12, 5, 6, 13],
+    [4, 0, 1, 7],
+    [11, 3, 2, 8],
+    [15, 10, 9, 14],
+  ],
+}
+const DITHER_AMP = 36
+
+// Error-diffusion kernels as [dx, dy, weight] with a shared divisor. Only
+// forward/below cells (scan order), so a single left-to-right pass works.
+type Kernel = { div: number; cells: [number, number, number][] }
+const DIFFUSION: Record<string, Kernel> = {
+  floyd: { div: 16, cells: [[1, 0, 7], [-1, 1, 3], [0, 1, 5], [1, 1, 1]] },
+  falseFloyd: { div: 8, cells: [[1, 0, 3], [0, 1, 3], [1, 1, 2]] },
+  jjn: {
+    div: 48,
+    cells: [
+      [1, 0, 7], [2, 0, 5],
+      [-2, 1, 3], [-1, 1, 5], [0, 1, 7], [1, 1, 5], [2, 1, 3],
+      [-2, 2, 1], [-1, 2, 3], [0, 2, 5], [1, 2, 3], [2, 2, 1],
+    ],
+  },
+  stucki: {
+    div: 42,
+    cells: [
+      [1, 0, 8], [2, 0, 4],
+      [-2, 1, 2], [-1, 1, 4], [0, 1, 8], [1, 1, 4], [2, 1, 2],
+      [-2, 2, 1], [-1, 2, 2], [0, 2, 4], [1, 2, 2], [2, 2, 1],
+    ],
+  },
+  atkinson: {
+    // distributes only 6/8 of the error — the classic washed-out Mac look
+    div: 8,
+    cells: [[1, 0, 1], [2, 0, 1], [-1, 1, 1], [0, 1, 1], [1, 1, 1], [0, 2, 1]],
+  },
+  burkes: {
+    div: 32,
+    cells: [[1, 0, 8], [2, 0, 4], [-2, 1, 2], [-1, 1, 4], [0, 1, 8], [1, 1, 4], [2, 1, 2]],
+  },
+  sierra: {
+    div: 32,
+    cells: [
+      [1, 0, 5], [2, 0, 3],
+      [-2, 1, 2], [-1, 1, 4], [0, 1, 5], [1, 1, 4], [2, 1, 2],
+      [-1, 2, 2], [0, 2, 3], [1, 2, 2],
+    ],
+  },
+  sierra2: {
+    div: 16,
+    cells: [[1, 0, 4], [2, 0, 3], [-2, 1, 1], [-1, 1, 2], [0, 1, 3], [1, 1, 2], [2, 1, 1]],
+  },
+  sierraLite: { div: 4, cells: [[1, 0, 2], [-1, 1, 1], [0, 1, 1]] },
+}
 
 const clamp8 = (v: number) => Math.max(0, Math.min(255, Math.round(v)))
 
@@ -251,17 +336,16 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
 
   // 6. Render with optional dithering. Each pixel maps within its region palette.
   const outPx: RGB[] = new Array(width * height)
-  if (opts.dither === 'floyd') {
+  const matrix = ORDERED[opts.dither as string]
+  const kernel = DIFFUSION[opts.dither as string]
+
+  if (kernel) {
+    // Error diffusion: accumulate quantisation error into a working buffer.
     const buf = new Float32Array(width * height * 3)
     for (let i = 0; i < px.length; i++) {
       buf[i * 3] = px[i][0]
       buf[i * 3 + 1] = px[i][1]
       buf[i * 3 + 2] = px[i][2]
-    }
-    const spread = (i: number, er: number, eg: number, eb: number, f: number) => {
-      buf[i * 3] += er * f
-      buf[i * 3 + 1] += eg * f
-      buf[i * 3 + 2] += eb * f
     }
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -273,19 +357,28 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
         const er = cur[0] - chosen[0]
         const eg = cur[1] - chosen[1]
         const eb = cur[2] - chosen[2]
-        if (x + 1 < width) spread(i + 1, er, eg, eb, 7 / 16)
-        if (y + 1 < height) {
-          if (x > 0) spread(i + width - 1, er, eg, eb, 3 / 16)
-          spread(i + width, er, eg, eb, 5 / 16)
-          if (x + 1 < width) spread(i + width + 1, er, eg, eb, 1 / 16)
+        for (const [dx, dy, w] of kernel.cells) {
+          const nx = x + dx
+          const ny = y + dy
+          if (nx < 0 || nx >= width || ny >= height) continue
+          const j = (ny * width + nx) * 3
+          const f = w / kernel.div
+          buf[j] += er * f
+          buf[j + 1] += eg * f
+          buf[j + 2] += eb * f
         }
       }
     }
-  } else if (opts.dither === 'bayer') {
+  } else if (matrix || opts.dither === 'random') {
+    // Ordered / stochastic: bias the source by a threshold offset, then map.
+    const n = matrix ? matrix.length : 0
+    const denom = n * n
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = y * width + x
-        const off = ((BAYER8[y & 7][x & 7] + 0.5) / 64 - 0.5) * BAYER_AMP
+        const off = matrix
+          ? ((matrix[y % n][x % n] + 0.5) / denom - 0.5) * DITHER_AMP
+          : (Math.random() - 0.5) * DITHER_AMP
         const src = px[i]
         const cur: RGB = [clamp8(src[0] + off), clamp8(src[1] + off), clamp8(src[2] + off)]
         const pal = matchPals[assign[regionOf(x, y)]]
@@ -293,6 +386,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
       }
     }
   } else {
+    // None
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = y * width + x
