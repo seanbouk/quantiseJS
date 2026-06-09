@@ -228,6 +228,7 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
               <option value="bayer4">Bayer 4×4</option>
               <option value="bayer8">Bayer 8×8</option>
               <option value="cluster4">Clustered dot 4×4</option>
+              <option value="blue">Blue noise (void-and-cluster)</option>
             </optgroup>
             <optgroup label="Error diffusion">
               <option value="floyd">Floyd–Steinberg</option>

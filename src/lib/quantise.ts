@@ -17,6 +17,7 @@ export type Dither =
   | 'bayer4'
   | 'bayer8'
   | 'cluster4'
+  | 'blue'
   // error diffusion
   | 'floyd'
   | 'falseFloyd'
@@ -150,6 +151,116 @@ const DIFFUSION: Record<string, Kernel> = {
     cells: [[1, 0, 4], [2, 0, 3], [-2, 1, 1], [-1, 1, 2], [0, 1, 3], [1, 1, 2], [2, 1, 1]],
   },
   sierraLite: { div: 4, cells: [[1, 0, 2], [-1, 1, 1], [0, 1, 1]] },
+}
+
+// Blue-noise threshold matrix via the void-and-cluster method (Ulichney 1993).
+// 64x64 toroidal mask, generated once on first use and cached. Values 0..N-1,
+// used exactly like an ordered matrix.
+let blueNoiseCache: number[][] | null = null
+function getBlueNoise(): number[][] {
+  if (blueNoiseCache) return blueNoiseCache
+  const size = 64
+  const N = size * size
+  const sigma = 1.5
+
+  // toroidal gaussian, indexed by wrapped offset — lets us update the energy
+  // field by adding/subtracting this kernel instead of recomputing exp() calls
+  const kernel = new Float64Array(N)
+  for (let oy = 0; oy < size; oy++) {
+    for (let ox = 0; ox < size; ox++) {
+      const dx = Math.min(ox, size - ox)
+      const dy = Math.min(oy, size - oy)
+      kernel[oy * size + ox] = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))
+    }
+  }
+
+  const energy = new Float64Array(N)
+  const pattern = new Uint8Array(N)
+  const toggle = (loc: number, val: number) => {
+    const py = (loc / size) | 0
+    const px = loc % size
+    const sign = val ? 1 : -1
+    pattern[loc] = val
+    for (let y = 0; y < size; y++) {
+      const oy = (((y - py) % size) + size) % size
+      const kbase = oy * size
+      const base = y * size
+      for (let x = 0; x < size; x++) {
+        const ox = (((x - px) % size) + size) % size
+        energy[base + x] += sign * kernel[kbase + ox]
+      }
+    }
+  }
+  const tightest = () => {
+    let best = -1
+    let bestE = -Infinity
+    for (let i = 0; i < N; i++) if (pattern[i] && energy[i] > bestE) (bestE = energy[i]), (best = i)
+    return best
+  }
+  const largest = () => {
+    let best = -1
+    let bestE = Infinity
+    for (let i = 0; i < N; i++) if (!pattern[i] && energy[i] < bestE) (bestE = energy[i]), (best = i)
+    return best
+  }
+
+  // deterministic PRNG (mulberry32) so the mask is identical every run
+  let s = 0x9e3779b9
+  const rnd = () => {
+    s = (s + 0x6d2b79f5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+
+  const ones = (N / 10) | 0
+  for (let placed = 0; placed < ones; ) {
+    const loc = (rnd() * N) | 0
+    if (!pattern[loc]) {
+      toggle(loc, 1)
+      placed++
+    }
+  }
+  // make the initial pattern homogeneous: repeatedly move the tightest cluster
+  // into the largest void until they coincide (bounded for safety)
+  for (let iter = 0; iter < N; iter++) {
+    const c = tightest()
+    toggle(c, 0)
+    const v = largest()
+    if (v === c) {
+      toggle(c, 1)
+      break
+    }
+    toggle(v, 1)
+  }
+
+  const prototype = pattern.slice()
+  const dither = new Int32Array(N)
+  // phase 1: remove clusters, ranks ones-1 .. 0
+  for (let rank = ones - 1; rank >= 0; rank--) {
+    const c = tightest()
+    toggle(c, 0)
+    dither[c] = rank
+  }
+  // restore prototype
+  energy.fill(0)
+  pattern.fill(0)
+  for (let i = 0; i < N; i++) if (prototype[i]) toggle(i, 1)
+  // phase 2+3: fill voids, ranks ones .. N-1
+  for (let rank = ones; rank < N; rank++) {
+    const v = largest()
+    toggle(v, 1)
+    dither[v] = rank
+  }
+
+  const m: number[][] = []
+  for (let y = 0; y < size; y++) {
+    const row: number[] = []
+    for (let x = 0; x < size; x++) row.push(dither[y * size + x])
+    m.push(row)
+  }
+  blueNoiseCache = m
+  return m
 }
 
 const clamp8 = (v: number) => Math.max(0, Math.min(255, Math.round(v)))
@@ -336,7 +447,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
 
   // 6. Render with optional dithering. Each pixel maps within its region palette.
   const outPx: RGB[] = new Array(width * height)
-  const matrix = ORDERED[opts.dither as string]
+  const matrix = opts.dither === 'blue' ? getBlueNoise() : ORDERED[opts.dither as string]
   const kernel = DIFFUSION[opts.dither as string]
 
   if (kernel) {
