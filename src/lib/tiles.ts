@@ -4,14 +4,18 @@
 // only stores it once). We model that by treating a tile and its allowed
 // transforms as the same unique tile, and — when the unique count exceeds the
 // budget — merging visually-similar tiles via transform-aware k-means.
+//
+// Tiles may be oblong (W != H). Flips and 180° rotation work for any rectangle;
+// 90°/270° rotation only applies to square tiles.
 
 import type { RGB } from './color'
 
 export interface DedupOptions {
-  tileSize: number
+  tileW: number
+  tileH: number
   flipH: boolean
   flipV: boolean
-  rotate: boolean // 90° rotations (not authentic to these consoles, bonus)
+  rotate: boolean // 90° rotations (square tiles only); 180° works for any shape
   maxUniqueTiles: number // 0 = unlimited (just report the natural count)
   iterations?: number
 }
@@ -34,29 +38,29 @@ const INVERSE: Record<TKey, TKey> = {
 }
 
 /** Source coordinate that output (x,y) reads from, for transform `key`. */
-function srcCoord(key: TKey, x: number, y: number, N: number): [number, number] {
+function srcCoord(key: TKey, x: number, y: number, W: number, H: number): [number, number] {
   switch (key) {
     case 'id':
       return [x, y]
     case 'h':
-      return [N - 1 - x, y]
+      return [W - 1 - x, y]
     case 'v':
-      return [x, N - 1 - y]
+      return [x, H - 1 - y]
     case 'hv':
-      return [N - 1 - x, N - 1 - y]
+      return [W - 1 - x, H - 1 - y]
     case 'r90':
-      return [y, N - 1 - x]
+      return [y, W - 1 - x] // square only
     case 'r270':
-      return [N - 1 - y, x]
+      return [H - 1 - y, x] // square only
   }
 }
 
-function allowedKeys(flipH: boolean, flipV: boolean, rotate: boolean): TKey[] {
+function allowedKeys(flipH: boolean, flipV: boolean, rotate: boolean, square: boolean): TKey[] {
   const keys: TKey[] = ['id']
   if (flipH) keys.push('h')
   if (flipV) keys.push('v')
-  if ((flipH && flipV) || rotate) keys.push('hv')
-  if (rotate) keys.push('r90', 'r270')
+  if ((flipH && flipV) || rotate) keys.push('hv') // 180° is shape-preserving
+  if (rotate && square) keys.push('r90', 'r270')
   return keys
 }
 
@@ -66,24 +70,25 @@ export function dedupeTiles(
   height: number,
   opts: DedupOptions,
 ): DedupResult {
-  const N = opts.tileSize
-  const n = N * N
-  const tilesX = Math.ceil(width / N)
-  const tilesY = Math.ceil(height / N)
+  const W = opts.tileW
+  const H = opts.tileH
+  const n = W * H
+  const tilesX = Math.ceil(width / W)
+  const tilesY = Math.ceil(height / H)
   const P = tilesX * tilesY
   const iterations = opts.iterations ?? 4
 
-  const keys = allowedKeys(opts.flipH, opts.flipV, opts.rotate)
+  const keys = allowedKeys(opts.flipH, opts.flipV, opts.rotate, W === H)
   const mapByKey = new Map<TKey, Int32Array>()
   for (const key of keys) buildMap(key)
   // inverse maps may be needed even if the key itself isn't an allowed variant
   for (const key of keys) if (!mapByKey.has(INVERSE[key])) buildMap(INVERSE[key])
   function buildMap(key: TKey) {
     const map = new Int32Array(n)
-    for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) {
-        const [sx, sy] = srcCoord(key, x, y, N)
-        map[y * N + x] = sy * N + sx
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const [sx, sy] = srcCoord(key, x, y, W, H)
+        map[y * W + x] = sy * W + sx
       }
     }
     mapByKey.set(key, map)
@@ -94,12 +99,12 @@ export function dedupeTiles(
   for (let ty = 0; ty < tilesY; ty++) {
     for (let tx = 0; tx < tilesX; tx++) {
       const t = new Float32Array(n * 3)
-      for (let ly = 0; ly < N; ly++) {
-        for (let lx = 0; lx < N; lx++) {
-          const gx = Math.min(tx * N + lx, width - 1)
-          const gy = Math.min(ty * N + ly, height - 1)
+      for (let ly = 0; ly < H; ly++) {
+        for (let lx = 0; lx < W; lx++) {
+          const gx = Math.min(tx * W + lx, width - 1)
+          const gy = Math.min(ty * H + ly, height - 1)
           const c = px[gy * width + gx]
-          const o = (ly * N + lx) * 3
+          const o = (ly * W + lx) * 3
           t[o] = c[0]
           t[o + 1] = c[1]
           t[o + 2] = c[2]
@@ -236,18 +241,14 @@ export function dedupeTiles(
       const p = ty * tilesX + tx
       used.add(assignC[p])
       const v = variants[assignC[p]][assignT[p]]
-      for (let ly = 0; ly < N; ly++) {
-        const gy = ty * N + ly
+      for (let ly = 0; ly < H; ly++) {
+        const gy = ty * H + ly
         if (gy >= height) break
-        for (let lx = 0; lx < N; lx++) {
-          const gx = tx * N + lx
+        for (let lx = 0; lx < W; lx++) {
+          const gx = tx * W + lx
           if (gx >= width) break
-          const o = (ly * N + lx) * 3
-          out[gy * width + gx] = [
-            Math.round(v[o]),
-            Math.round(v[o + 1]),
-            Math.round(v[o + 2]),
-          ]
+          const o = (ly * W + lx) * 3
+          out[gy * width + gx] = [Math.round(v[o]), Math.round(v[o + 1]), Math.round(v[o + 2])]
         }
       }
     }

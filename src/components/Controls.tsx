@@ -44,7 +44,8 @@ export interface Settings {
   colorsPerPalette: number
   maxColorsPerTile: number
   sharedBg: boolean
-  tileSize: number
+  tileWidth: number
+  tileHeight: number
   width: number
   height: number
   attributeGrid: boolean
@@ -82,7 +83,8 @@ export function Controls({ settings, setSettings, onFile, preset, hasImage }: Pr
       colorsPerPalette: p.colorsPerPalette,
       maxColorsPerTile: p.maxColorsPerTile,
       sharedBg: p.sharedBg,
-      tileSize: p.tileSize,
+      tileWidth: p.tileSize,
+      tileHeight: p.tileSize,
       width: p.width,
       height: p.height,
       attributeGrid: p.attributeGrid,
@@ -219,14 +221,25 @@ export function Controls({ settings, setSettings, onFile, preset, hasImage }: Pr
         <legend>Tiles</legend>
         <div className="grid2">
           <div className="field">
-            <label>tile size</label>
+            <label>tile width</label>
             <Combo
-              value={settings.tileSize}
+              value={settings.tileWidth}
               min={1}
-              max={64}
-              options={[2, 4, 8, 16, 32, 64]}
-              onChange={(v) => update({ tileSize: v })}
-              ariaLabel="tile size"
+              max={512}
+              options={[4, 8, 16, 32, 64, 128]}
+              onChange={(v) => update({ tileWidth: v })}
+              ariaLabel="tile width"
+            />
+          </div>
+          <div className="field">
+            <label>tile height</label>
+            <Combo
+              value={settings.tileHeight}
+              min={1}
+              max={512}
+              options={[4, 8, 16, 32, 64, 128]}
+              onChange={(v) => update({ tileHeight: v })}
+              ariaLabel="tile height"
             />
           </div>
         </div>

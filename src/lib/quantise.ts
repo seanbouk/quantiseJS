@@ -40,8 +40,10 @@ export interface QuantiseOptions {
   maxColorsPerTile: number
   sharedBg: boolean
   bgColor?: RGB
-  regionSize: number // palette-assignment block (NES attribute grid = 2x tile)
-  tileSize: number // dedup block
+  regionW: number // palette-assignment block (NES attribute grid = 2x tile)
+  regionH: number
+  tileW: number // dedup block
+  tileH: number
   depth: DepthMode
   dither: Dither
   shadow: boolean // x0.5 brightness variants (Mega Drive shadow)
@@ -336,7 +338,8 @@ function buildPalette(pool: ColorCount[], size: number, sharedBg: boolean, bg: R
 
 export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResult {
   const { width, height, data } = input
-  const regionSize = Math.max(1, opts.regionSize)
+  const regionW = Math.max(1, opts.regionW)
+  const regionH = Math.max(1, opts.regionH)
   const paletteCount = Math.max(1, opts.palettes)
   const effectiveColors = Math.max(1, Math.min(opts.maxColorsPerTile, opts.colorsPerPalette))
   const iterations = opts.iterations ?? 4
@@ -360,15 +363,15 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
   }
 
   // 3. Partition into palette regions.
-  const regionsX = Math.ceil(width / regionSize)
-  const regionsY = Math.ceil(height / regionSize)
+  const regionsX = Math.ceil(width / regionW)
+  const regionsY = Math.ceil(height / regionH)
   const regionCount = regionsX * regionsY
   const regions: Region[] = new Array(regionCount)
   for (let ry = 0; ry < regionsY; ry++) {
     for (let rx = 0; rx < regionsX; rx++) {
       const colors: RGB[] = []
-      for (let y = ry * regionSize; y < Math.min((ry + 1) * regionSize, height); y++) {
-        for (let x = rx * regionSize; x < Math.min((rx + 1) * regionSize, width); x++) {
+      for (let y = ry * regionH; y < Math.min((ry + 1) * regionH, height); y++) {
+        for (let x = rx * regionW; x < Math.min((rx + 1) * regionW, width); x++) {
           colors.push(px[y * width + x])
         }
       }
@@ -471,7 +474,7 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
 
   const matchPals = palettes.map((p) => expandBrightness(p, opts.shadow, opts.highlight))
   const regionOf = (x: number, y: number) =>
-    Math.floor(y / regionSize) * regionsX + Math.floor(x / regionSize)
+    Math.floor(y / regionH) * regionsX + Math.floor(x / regionW)
 
   // 6. Render with optional dithering. Each pixel maps within its region palette.
   const outPx: RGB[] = new Array(width * height)
@@ -544,7 +547,8 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
 
   // 7. Tile dedup + max-unique-tile reduction.
   const dedup = dedupeTiles(outPx, width, height, {
-    tileSize: opts.tileSize,
+    tileW: opts.tileW,
+    tileH: opts.tileH,
     flipH: opts.flipH,
     flipV: opts.flipV,
     rotate: opts.rotate,
@@ -588,8 +592,8 @@ export function quantise(input: ImageData, opts: QuantiseOptions): QuantiseResul
       uniqueColorsOut: usedColors.size,
       naturalUniqueTiles: dedup.naturalUnique,
       uniqueTiles: dedup.uniqueCount,
-      tilesX: Math.ceil(width / opts.tileSize),
-      tilesY: Math.ceil(height / opts.tileSize),
+      tilesX: Math.ceil(width / opts.tileW),
+      tilesY: Math.ceil(height / opts.tileH),
     },
   }
 }
