@@ -180,15 +180,30 @@ main {
   color: var(--muted);
 }
 
-.canvas-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.quantised {
+  margin: 0;
+}
+.quantised canvas {
+  width: 100%;
+}
+
+.bottom-row {
+  display: flex;
   gap: 20px;
+  align-items: flex-start;
 }
 @media (max-width: 560px) {
-  .canvas-grid {
-    grid-template-columns: 1fr;
+  .bottom-row {
+    flex-direction: column;
   }
+}
+.source {
+  margin: 0;
+  flex: 0 0 auto;
+  max-width: 220px;
+}
+.palettes {
+  flex: 1 1 auto;
 }
 
 figure {
@@ -225,7 +240,6 @@ canvas {
 }
 
 .dl {
-  margin-top: 8px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--text);
@@ -236,12 +250,16 @@ canvas {
 }
 
 .stats {
-  grid-column: 1 / -1;
+  margin-top: 10px;
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
+  align-items: center;
   font-size: 13px;
   color: var(--muted);
+}
+.stats .dl {
+  margin-left: auto;
 }
 .stats b {
   color: var(--text);

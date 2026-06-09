@@ -9,20 +9,7 @@ interface Props {
 }
 
 export function CanvasView({ img, result, fileName, busy }: Props) {
-  const origRef = useRef<HTMLCanvasElement>(null)
   const outRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const c = origRef.current
-    if (!c || !img) return
-    const max = 320
-    const scale = Math.min(max / img.width, max / img.height, 1)
-    c.width = Math.round(img.width * scale)
-    c.height = Math.round(img.height * scale)
-    const ctx = c.getContext('2d')!
-    ctx.imageSmoothingEnabled = true
-    ctx.drawImage(img, 0, 0, c.width, c.height)
-  }, [img])
 
   useEffect(() => {
     const c = outRef.current
@@ -50,29 +37,18 @@ export function CanvasView({ img, result, fileName, busy }: Props) {
   }
 
   return (
-    <div className="canvas-grid">
-      <figure>
-        <figcaption>Source</figcaption>
-        <canvas ref={origRef} />
-      </figure>
-      <figure>
-        <figcaption>
-          Quantised
-          {result && (
-            <span className="dims">
-              {result.stats.width}×{result.stats.height}
-            </span>
-          )}
-        </figcaption>
-        <div className="out-wrap" data-busy={busy}>
-          <canvas ref={outRef} className="pixelated" />
-        </div>
+    <figure className="quantised">
+      <figcaption>
+        Quantised
         {result && (
-          <button className="dl" onClick={download}>
-            Download PNG
-          </button>
+          <span className="dims">
+            {result.stats.width}×{result.stats.height}
+          </span>
         )}
-      </figure>
+      </figcaption>
+      <div className="out-wrap" data-busy={busy}>
+        <canvas ref={outRef} className="pixelated" />
+      </div>
 
       {result && (
         <div className="stats">
@@ -92,8 +68,11 @@ export function CanvasView({ img, result, fileName, busy }: Props) {
           <span>
             <b>{result.stats.uniqueColorsOut}</b> unique colours
           </span>
+          <button className="dl" onClick={download}>
+            Download PNG
+          </button>
         </div>
       )}
-    </div>
+    </figure>
   )
 }

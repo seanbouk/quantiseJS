@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Controls, type Settings } from './components/Controls'
 import { CanvasView } from './components/CanvasView'
+import { SourceView } from './components/SourceView'
 import { PaletteView } from './components/PaletteView'
 import { imageToImageData, loadImageFile } from './lib/image'
 import { quantise, type QuantiseResult } from './lib/quantise'
@@ -106,7 +107,12 @@ export default function App() {
 
         <main>
           <CanvasView img={img} result={result} fileName={fileName.current} busy={busy} />
-          {result && <PaletteView result={result} />}
+          {img && (
+            <div className="bottom-row">
+              <SourceView img={img} />
+              {result && <PaletteView result={result} />}
+            </div>
+          )}
         </main>
       </div>
     </div>
