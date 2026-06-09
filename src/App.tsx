@@ -25,7 +25,7 @@ function defaultSettings(): Settings {
     rotate: false,
     shadow: p.shadow ?? false,
     highlight: p.highlight ?? false,
-    smooth: false,
+    downscale: 'nearest',
     fitMode: 'fill',
     dither: 'none',
   }
@@ -49,7 +49,7 @@ export default function App() {
         img,
         settings.width,
         settings.height,
-        settings.smooth,
+        settings.downscale,
         settings.fitMode,
       )
       const res = quantise(input, {

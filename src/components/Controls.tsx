@@ -1,7 +1,7 @@
 import { type ChangeEvent } from 'react'
 import { PRESETS, type Preset } from '../lib/presets'
 import { Combo } from './Combo'
-import type { FitMode } from '../lib/image'
+import type { DownscaleMode, FitMode } from '../lib/image'
 import type { Dither } from '../lib/quantise'
 
 export interface Settings {
@@ -21,7 +21,7 @@ export interface Settings {
   shadow: boolean
   highlight: boolean
   // artistic / processing (not hardware-determined; persist across presets)
-  smooth: boolean
+  downscale: DownscaleMode
   fitMode: FitMode
   dither: Dither
 }
@@ -208,10 +208,17 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
             <option value="fill">Fill</option>
           </select>
         </div>
-        <label className="check">
-          <input type="checkbox" checked={settings.smooth} onChange={check('smooth')} />
-          Box-filter downscale (off = nearest)
-        </label>
+        <div className="field">
+          <label>downscale</label>
+          <select
+            value={settings.downscale}
+            onChange={(e) => update({ downscale: e.target.value as DownscaleMode })}
+          >
+            <option value="nearest">Nearest</option>
+            <option value="smooth">Smooth</option>
+            <option value="smoothHq">Smooth (HQ)</option>
+          </select>
+        </div>
         <div className="field">
           <label>dithering</label>
           <select value={settings.dither} onChange={(e) => update({ dither: e.target.value as Dither })}>

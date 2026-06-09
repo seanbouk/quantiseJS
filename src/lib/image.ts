@@ -2,6 +2,12 @@
 
 export type FitMode = 'stretch' | 'fit' | 'fill'
 
+// How the source is resampled when shrunk to the output resolution:
+//  - nearest:  pick the single nearest source pixel (sharp, aliases)
+//  - smooth:   average source pixels, fast quality
+//  - smoothHq: average source pixels, high quality (less aliasing)
+export type DownscaleMode = 'nearest' | 'smooth' | 'smoothHq'
+
 /**
  * Compute the destination rect for drawing `img` into a `tw`x`th` frame.
  *  - stretch: fill the frame, ignoring aspect (distorts)
@@ -21,7 +27,7 @@ export function imageToImageData(
   img: HTMLImageElement,
   width: number,
   height: number,
-  smooth: boolean,
+  downscale: DownscaleMode,
   mode: FitMode = 'stretch',
 ): ImageData {
   const canvas = document.createElement('canvas')
@@ -31,8 +37,8 @@ export function imageToImageData(
   // Letterbox bars (fit mode) are filled black so they quantise predictably.
   ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, width, height)
-  ctx.imageSmoothingEnabled = smooth
-  ctx.imageSmoothingQuality = 'high'
+  ctx.imageSmoothingEnabled = downscale !== 'nearest'
+  ctx.imageSmoothingQuality = downscale === 'smoothHq' ? 'high' : 'low'
   const { dx, dy, dw, dh } = destRect(img.width, img.height, width, height, mode)
   ctx.drawImage(img, dx, dy, dw, dh)
   return ctx.getImageData(0, 0, width, height)
