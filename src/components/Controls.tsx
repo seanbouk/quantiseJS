@@ -129,10 +129,10 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
           <div className="field">
             <label># palettes</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              className="combo"
               list="opt-palettes"
-              min={1}
-              max={16}
               value={settings.palettes}
               onChange={num('palettes', 1, 16)}
             />
@@ -140,10 +140,10 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
           <div className="field">
             <label>colours / palette</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              className="combo"
               list="opt-colors"
-              min={2}
-              max={256}
               value={settings.colorsPerPalette}
               onChange={num('colorsPerPalette', 2, 256)}
             />
@@ -151,10 +151,10 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
           <div className="field">
             <label>max colours / tile</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              className="combo"
               list="opt-colors"
-              min={2}
-              max={256}
               value={settings.maxColorsPerTile}
               onChange={num('maxColorsPerTile', 2, 256)}
             />
@@ -186,10 +186,10 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
           <div className="field">
             <label>tile size</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              className="combo"
               list="opt-tile"
-              min={1}
-              max={64}
               value={settings.tileSize}
               onChange={num('tileSize', 1, 64)}
             />
