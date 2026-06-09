@@ -4,7 +4,7 @@
 // rather than merely digitised.
 
 export interface Grade {
-  brightness: number // -100..100, additive lift (shifts the black/white floor)
+  brightness: number // -100..100, multiplicative gain (keeps black at black)
   contrast: number // -100..100
   saturation: number // -100..100 (negative = toward grey, positive = away)
   hue: number // -180..180 degrees
@@ -41,7 +41,7 @@ export function applyGrade(img: ImageData, g: Grade): ImageData {
   const src = img.data
   const dst = out.data
 
-  const bright = g.brightness / 100 // additive lift in 0..1 space
+  const bright = 1 + g.brightness / 100 // multiplicative gain (0 = black, 1 = unchanged, 2 = double)
   const contrast = 1 + g.contrast / 100 // 0..2
   const sat = 1 + g.saturation / 100 // 0..2
   const by = (g.temperature / 100) * 0.2 // blue(-) <-> yellow(+)
@@ -73,11 +73,10 @@ export function applyGrade(img: ImageData, g: Grade): ImageData {
     r = (r - 0.5) * contrast + 0.5
     gg = (gg - 0.5) * contrast + 0.5
     b = (b - 0.5) * contrast + 0.5
-    // brightness — additive lift applied after contrast, so it shifts the
-    // whole tonal range including the black floor
-    r += bright
-    gg += bright
-    b += bright
+    // brightness — multiplicative gain, so black stays black
+    r *= bright
+    gg *= bright
+    b *= bright
     // temperature (blue <-> yellow) and tint (green <-> magenta)
     r += by + gm
     gg += by - gm
