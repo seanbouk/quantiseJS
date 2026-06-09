@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 
 export interface SelectGroup {
   label?: string
@@ -18,6 +18,7 @@ interface Props {
  */
 export function SelectMenu({ value, groups, onChange, ariaLabel }: Props) {
   const [open, setOpen] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({})
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -27,6 +28,28 @@ export function SelectMenu({ value, groups, onChange, ariaLabel }: Props) {
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
+  // Keep the popup within the viewport: cap its height to the available space,
+  // and open upward when there's more room above than below.
+  useLayoutEffect(() => {
+    if (!open || !wrapRef.current) return
+    const measure = () => {
+      const rect = wrapRef.current!.getBoundingClientRect()
+      const margin = 12
+      const below = window.innerHeight - rect.bottom - margin
+      const above = rect.top - margin
+      const up = below < 240 && above > below
+      const maxHeight = Math.max(140, Math.min(560, Math.floor(up ? above : below)))
+      setMenuStyle(
+        up
+          ? { top: 'auto', bottom: 'calc(100% + 2px)', maxHeight }
+          : { top: 'calc(100% + 2px)', bottom: 'auto', maxHeight },
+      )
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
   }, [open])
 
   const current = groups.flatMap((g) => g.options).find((o) => o.value === value)
@@ -42,7 +65,7 @@ export function SelectMenu({ value, groups, onChange, ariaLabel }: Props) {
         {current?.label ?? value}
       </button>
       {open && (
-        <ul className="combo-list">
+        <ul className="combo-list" style={menuStyle}>
           {groups.map((g, gi) => (
             <Fragment key={gi}>
               {g.label && <li className="grp-label">{g.label}</li>}
