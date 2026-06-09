@@ -1,5 +1,6 @@
 import { type ChangeEvent } from 'react'
 import { PRESETS, type Preset } from '../lib/presets'
+import { Combo } from './Combo'
 import type { FitMode } from '../lib/image'
 import type { Dither } from '../lib/quantise'
 
@@ -72,21 +73,6 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
 
   return (
     <aside className="controls">
-      <datalist id="opt-palettes">
-        {[1, 2, 4, 8, 16].map((o) => (
-          <option key={o} value={o} />
-        ))}
-      </datalist>
-      <datalist id="opt-colors">
-        {[2, 4, 8, 16, 32, 64, 256].map((o) => (
-          <option key={o} value={o} />
-        ))}
-      </datalist>
-      <datalist id="opt-tile">
-        {[4, 8, 16, 32].map((o) => (
-          <option key={o} value={o} />
-        ))}
-      </datalist>
 
       <label className="file">
         <input
@@ -128,35 +114,35 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         <div className="grid2">
           <div className="field">
             <label># palettes</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="combo"
-              list="opt-palettes"
+            <Combo
               value={settings.palettes}
-              onChange={num('palettes', 1, 16)}
+              min={1}
+              max={16}
+              options={[1, 2, 3, 4, 8, 16]}
+              onChange={(v) => update({ palettes: v })}
+              ariaLabel="palettes"
             />
           </div>
           <div className="field">
             <label>colours / palette</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="combo"
-              list="opt-colors"
+            <Combo
               value={settings.colorsPerPalette}
-              onChange={num('colorsPerPalette', 2, 256)}
+              min={2}
+              max={256}
+              options={[2, 4, 8, 16, 32, 64, 256]}
+              onChange={(v) => update({ colorsPerPalette: v })}
+              ariaLabel="colours per palette"
             />
           </div>
           <div className="field">
             <label>max colours / tile</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="combo"
-              list="opt-colors"
+            <Combo
               value={settings.maxColorsPerTile}
-              onChange={num('maxColorsPerTile', 2, 256)}
+              min={2}
+              max={256}
+              options={[2, 4, 8, 16, 32, 64, 256]}
+              onChange={(v) => update({ maxColorsPerTile: v })}
+              ariaLabel="max colours per tile"
             />
           </div>
         </div>
@@ -185,13 +171,13 @@ export function Controls({ settings, setSettings, onFile, preset, busy, hasImage
         <div className="grid2">
           <div className="field">
             <label>tile size</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="combo"
-              list="opt-tile"
+            <Combo
               value={settings.tileSize}
-              onChange={num('tileSize', 1, 64)}
+              min={1}
+              max={64}
+              options={[2, 4, 8, 16, 32, 64]}
+              onChange={(v) => update({ tileSize: v })}
+              ariaLabel="tile size"
             />
           </div>
         </div>
