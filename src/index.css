@@ -120,12 +120,23 @@ input[type='text'] {
   appearance: none;
   cursor: pointer;
   padding-right: 26px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa1b2' stroke-width='1.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
 }
 .combo-wrap {
   position: relative;
+}
+/* down-arrow so it reads as a dropdown (clicks pass through to the input) */
+.combo-wrap::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -2px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--muted);
+  pointer-events: none;
 }
 .combo-list {
   position: absolute;
